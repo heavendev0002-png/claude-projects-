@@ -1,0 +1,3 @@
+- [Microsoft Simulator project](microsoft-simulator-project.md) — Word simulator (Angular 16) status, Antigravity prompt workflow, open items
+- [Strict rules in every prompt](antigravity-prompt-strict-rules.md) — full STRICT RULES block in every Antigravity prompt, incl. no gh auth/tokens
+- [Don't touch simulator folder](do-not-touch-simulator-folder.md) — never read/edit D:\Mitul(AI)\word-processing-simulator; no unit tests

@@ -1,0 +1,767 @@
+===== shared/validators/contract.validator.ts
+     1	import { ActivityPayload, AppKind } from '../models/activity.types';
+     2	
+     3	export const GOAL_TYPES: Record<AppKind, string[]> = {
+     4	  word: [
+     5	    'textStyle',
+     6	    'paragraph',
+     7	    'list',
+     8	    'textContains',
+     9	    'textCount',
+    10	    'textOrder',
+    11	    'image',
+    12	    'pageSetup',
+    13	    'table',
+    14	    'element',
+    15	    'action',
+    16	  ],
+    17	  excel: [
+    18	    'cellValue',
+    19	    'cellFormula',
+    20	    'cellFormat',
+    21	    'sorted',
+    22	    'filter',
+    23	    'chart',
+    24	    'pivotTable',
+    25	    'comment',
+    26	    'conditionalFormat',
+    27	    'dataValidation',
+    28	    'noDuplicates',
+    29	    'action',
+    30	  ],
+    31	  powerpoint: [
+    32	    'slideText',
+    33	    'textStyle',
+    34	    'list',
+    35	    'slideCount',
+    36	    'image',
+    37	    'textBox',
+    38	    'shape',
+    39	    'table',
+    40	    'background',
+    41	    'layout',
+    42	    'theme',
+    43	    'transition',
+    44	    'slideOrder',
+    45	    'action',
+    46	  ],
+    47	};
+    48	
+    49	export function parseCellAddress(addr: string): [number, number] {
+    50	  const m = String(addr).trim().toUpperCase().match(/^([A-Z]+)([1-9]\d*)$/);
+    51	  if (!m) throw new Error(`Invalid cell address: ${addr}`);
+    52	  let col = 0;
+    53	  for (let i = 0; i < m[1].length; i++) {
+    54	    col = col * 26 + (m[1].charCodeAt(i) - 64);
+    55	  }
+    56	  return [parseInt(m[2], 10) - 1, col - 1];
+    57	}
+    58	
+    59	export function validateCellRange(rng: string): void {
+    60	  const parts = String(rng).split(':');
+    61	  if (parts.length > 2) throw new Error(`Invalid range: ${rng}`);
+    62	  parts.forEach(parseCellAddress);
+    63	}
+    64	
+    65	export function validateActivity(kind: AppKind, data: unknown): ActivityPayload {
+    66	  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    67	    throw new Error('Activity must be an object.');
+    68	  }
+    69	
+    70	  const act = data as Record<string, any>;
+    71	
+    72	  if (typeof act['assetBaseUrl'] !== 'string') {
+    73	    throw new Error('assetBaseUrl is required.');
+    74	  }
+    75	
+    76	  if (!['LIGHT', 'DARK'].includes(act['theme'])) {
+    77	    throw new Error('theme must be LIGHT or DARK.');
+    78	  }
+    79	
+    80	  if (act['showMeHow'] !== undefined && typeof act['showMeHow'] !== 'boolean') {
+    81	    throw new Error('showMeHow must be a boolean.');
+    82	  }
+    83	
+    84	  const validateGoals = (goals: unknown[]) => {
+    85	    if (!Array.isArray(goals)) throw new Error('goals must be an array.');
+    86	
+    87	    for (const rawGoal of goals) {
+    88	      if (!rawGoal || typeof rawGoal !== 'object') {
+    89	        throw new Error('Goal must be an object.');
+    90	      }
+    91	      const g = rawGoal as Record<string, any>;
+    92	      if (!GOAL_TYPES[kind].includes(g['type'])) {
+    93	        throw new Error(`Unknown goal type: ${g['type']}`);
+    94	      }
+    95	
+    96	      const requiredKeys: Record<string, string[]> =
+    97	        kind === 'word'
+    98	          ? {
+    99	              textStyle: ['text'],
+   100	              paragraph: ['text'],
+   101	              list: ['items', 'listType'],
+   102	              textCount: ['text', 'count'],
+   103	              textOrder: ['sequence'],
+   104	              element: ['element'],
+   105	              action: ['action'],
+   106	            }
+   107	          : kind === 'excel'
+   108	          ? {
+   109	              cellValue: ['cells'],
+   110	              cellFormula: ['cell'],
+   111	              cellFormat: ['range'],
+   112	              sorted: ['range', 'byColumn', 'order'],
+   113	              filter: ['range'],
+   114	              comment: ['cell'],
+   115	              conditionalFormat: ['range'],
+   116	              dataValidation: ['range'],
+   117	              noDuplicates: ['range'],
+   118	              action: ['action'],
+   119	            }
+   120	          : {
+   121	              textStyle: ['text'],
+   122	              list: ['placeholder', 'listType'],
+   123	              layout: ['layout'],
+   124	              theme: ['theme'],
+   125	              slideOrder: ['titles'],
+   126	              action: ['action'],
+   127	            };
+   128	
+   129	      const goalType = String(g['type']);
+   130	      const required = requiredKeys[goalType] || [];
+   131	      for (const key of required) {
+   132	        if (g[key] === undefined || g[key] === null) {
+   133	          throw new Error(`${goalType}.${key} is required.`);
+   134	        }
+   135	      }
+   136	
+   137	      for (const key of [
+   138	        'text',
+   139	        'action',
+   140	        'element',
+   141	        'placeholder',
+   142	        'layout',
+   143	        'theme',
+   144	        'cell',
+   145	        'range',
+   146	      ]) {
+   147	        if (g[key] !== undefined && typeof g[key] !== 'string') {
+   148	          throw new Error(`${goalType}.${key} must be text.`);
+   149	        }
+   150	      }
+   151	
+   152	      for (const key of [
+   153	        'items',
+   154	        'sequence',
+   155	        'titles',
+   156	        'notContains',
+   157	        'allowed',
+   158	      ]) {
+   159	        if (
+   160	          g[key] !== undefined &&
+   161	          (!Array.isArray(g[key]) || g[key].some((v: unknown) => typeof v !== 'string'))
+   162	        ) {
+   163	          throw new Error(`${goalType}.${key} must be a list of strings.`);
+   164	        }
+   165	      }
+   166	
+   167	      for (const key of [
+   168	        'count',
+   169	        'min',
+   170	        'minItems',
+   171	        'minLines',
+   172	        'rows',
+   173	        'columns',
+   174	        'slide',
+   175	      ]) {
+   176	        if (g[key] !== undefined && (!Number.isInteger(g[key]) || g[key] < 0)) {
+   177	          throw new Error(`${goalType}.${key} must be a non-negative integer.`);
+   178	        }
+   179	      }
+   180	
+   181	      if (g['slide'] !== undefined && g['slide'] < 1) {
+   182	        throw new Error('Slide numbers start at 1.');
+   183	      }
+   184	
+   185	      if (kind === 'excel') {
+   186	        for (const key of ['cell', 'range']) {
+   187	          if (g[key]) validateCellRange(g[key]);
+   188	        }
+   189	        if (goalType === 'cellValue') {
+   190	          const cells = g['cells'];
+   191	          if (typeof cells !== 'object' || Array.isArray(cells) || !cells) {
+   192	            throw new Error('cellValue.cells must be an object.');
+   193	          }
+   194	          Object.keys(cells).forEach(parseCellAddress);
+   195	        }
+   196	      }
+   197	    }
+   198	  };
+   199	
+   200	  if (kind === 'word' && !act['tasks']) {
+   201	    if (
+   202	      typeof act['instruction'] !== 'string' ||
+   203	      typeof act['startingDocument'] !== 'string'
+   204	    ) {
+   205	      throw new Error('instruction and startingDocument are required.');
+   206	    }
+   207	    validateGoals(act['goals'] || []);
+   208	  } else {
+   209	    if (
+   210	      !['lesson', 'assessment'].includes(act['mode']) ||
+   211	      typeof act['title'] !== 'string' ||
+   212	      !Array.isArray(act['tasks']) ||
+   213	      !act['tasks'].length
+   214	    ) {
+   215	      throw new Error('mode, title and tasks are required.');
+   216	    }
+   217	
+   218	    if (
+   219	      (act['mode'] === 'lesson' && act['tasks'].length !== 1) ||
+   220	      (act['mode'] === 'assessment' && act['tasks'].length < 2)
+   221	    ) {
+   222	      throw new Error(
+   223	        'A lesson needs one task; an assessment needs at least two.'
+   224	      );
+   225	    }
+   226	
+   227	    act['tasks'].forEach((t: Record<string, any>, i: number) => {
+   228	      if (
+   229	        typeof t['title'] !== 'string' ||
+   230	        typeof t['explanation'] !== 'string' ||
+   231	        !Array.isArray(t['instructions']) ||
+   232	        t['instructions'].length < 1 ||
+   233	        t['instructions'].length > 3 ||
+   234	        t['instructions'].some((x: unknown) => typeof x !== 'string')
+   235	      ) {
+   236	        throw new Error(
+   237	          'Each task needs a title, explanation and 1–3 instructions.'
+   238	        );
+   239	      }
+   240	
+   241	      if (t['showMeHow'] !== undefined && typeof t['showMeHow'] !== 'boolean') {
+   242	        throw new Error('showMeHow must be a boolean.');
+   243	      }
+   244	      validateGoals(t['goals'] || []);
+   245	
+   246	      if (kind === 'word') {
+   247	        const s = t['startingDocument'];
+   248	        if (s === null && i > 0) return;
+   249	        if (typeof s !== 'string') {
+   250	          throw new Error('startingDocument is required for the first task.');
+   251	        }
+   252	      } else {
+   253	        const key = kind === 'excel' ? 'startingSheet' : 'startingDeck';
+   254	        const s = t[key];
+   255	        if (s === null && i > 0) return;
+   256	        if (!s || typeof s !== 'object') {
+   257	          throw new Error(`${key} is required for the first task.`);
+   258	        }
+   259	
+   260	        if (
+   261	          kind === 'excel' &&
+   262	          (!s.cells || typeof s.cells !== 'object' || Array.isArray(s.cells))
+   263	        ) {
+   264	          throw new Error('startingSheet.cells must be an object.');
+   265	        }
+   266	
+   267	        if (
+   268	          kind === 'powerpoint' &&
+   269	          (!Array.isArray(s.slides) || !s.slides.length)
+   270	        ) {
+   271	          throw new Error('startingDeck needs at least one slide.');
+   272	        }
+   273	      }
+   274	    });
+   275	  }
+   276	
+   277	  return act as ActivityPayload;
+   278	}
+===== services/word-document.service.ts
+     1	import { Injectable } from '@angular/core';
+     2	import {
+     3	  ActivityPayload,
+     4	  BaseGoal,
+     5	  COLORS,
+     6	  FONTS,
+     7	  clone,
+     8	  matches,
+     9	  safeAsset,
+    10	  sanitizeHtml,
+    11	} from 'shared';
+    12	import {
+    13	  RichEditor,
+    14	  findText,
+    15	  setSelection,
+    16	  styleMatches,
+    17	} from './rich-text.service';
+    18	
+    19	export interface PageSetup {
+    20	  orientation: 'portrait' | 'landscape';
+    21	  paperSize: 'Letter' | 'A4' | 'Legal';
+    22	  margins: { top: number; bottom: number; left: number; right: number };
+    23	}
+    24	
+    25	export interface WordComment {
+    26	  text: string;
+    27	  comment: string;
+    28	  resolved: boolean;
+    29	  replies?: string[];
+    30	}
+    31	
+    32	export interface ActionLog {
+    33	  action: string;
+    34	  text?: string;
+    35	}
+    36	
+    37	@Injectable({
+    38	  providedIn: 'root',
+    39	})
+    40	export class WordDocumentService {
+    41	  html: string = '';
+    42	  setup: PageSetup = {
+    43	    orientation: 'portrait',
+    44	    paperSize: 'Letter',
+    45	    margins: { top: 1, bottom: 1, left: 1, right: 1 },
+    46	  };
+    47	  header: string = '';
+    48	  footer: string = '';
+    49	  numbering: boolean = false;
+    50	  comments: WordComment[] = [];
+    51	  styles: Record<string, any> = {};
+    52	  actions: ActionLog[] = [];
+    53	
+    54	  editorElement: HTMLElement | null = null;
+    55	  page2Element: HTMLElement | null = null;
+    56	  hasPageBreak: boolean = false;
+    57	  rich: RichEditor | null = null;
+    58	
+    59	  init(data: any, activity: ActivityPayload, editorEl: HTMLElement): void {
+    60	    this.editorElement = editorEl;
+    61	    this.page2Element = null;
+    62	    this.hasPageBreak = false;
+    63	    this.actions = [];
+    64	
+    65	    const effectivePageSetup = data?.pageSetup || activity?.pageSetup || {};
+    66	    this.setup = {
+    67	      orientation: 'portrait',
+    68	      paperSize: 'Letter',
+    69	      margins: { top: 1, bottom: 1, left: 1, right: 1 },
+    70	      ...clone(effectivePageSetup),
+    71	    };
+    72	    this.setup.margins = {
+    73	      top: 1,
+    74	      bottom: 1,
+    75	      left: 1,
+    76	      right: 1,
+    77	      ...effectivePageSetup?.margins,
+    78	    };
+    79	
+    80	    this.header = '';
+    81	    this.footer = '';
+    82	    this.numbering = false;
+    83	    this.styles = {};
+    84	    this.comments = clone(data.comments || []).map((x: any) => ({
+    85	      ...x,
+    86	      resolved: !!x.resolved,
+    87	      replies: Array.isArray(x.replies) ? x.replies : [],
+    88	    }));
+    89	
+    90	    this.html = sanitizeHtml(data.startingDocument || '', activity.assetBaseUrl);
+    91	    editorEl.innerHTML = this.html;
+    92	
+    93	    if (this.rich) {
+    94	      this.rich.destroy();
+    95	      this.rich = null;
+    96	    }
+    97	
+    98	    this.rich = new RichEditor(
+    99	      editorEl,
+   100	      () => {
+   101	        this.html = editorEl.innerHTML;
+   102	      },
+   103	      (action, text) => {
+   104	        this.actions.push({ action, text });
+   105	      }
+   106	    );
+   107	  }
+   108	
+   109	  logAction(action: string, text?: string): void {
+   110	    this.actions.push({ action, text });
+   111	  }
+   112	
+   113	  check(g: Record<string, any>): boolean {
+   114	    if (!this.editorElement) return false;
+   115	    const root = this.editorElement;
+   116	    const p2 = this.page2Element;
+   117	    const text = (root.textContent || '') + (p2 ? ' ' + (p2.textContent || '') : '');
+   118	
+   119	    switch (g['type']) {
+   120	      case 'textStyle':
+   121	        return styleMatches(root, g) || (p2 ? styleMatches(p2, g) : false);
+   122	
+   123	      case 'textContains':
+   124	        return (
+   125	          (!g['contains'] || g['contains'].every((x: string) => text.includes(x))) &&
+   126	          (!g['notContains'] || g['notContains'].every((x: string) => !text.includes(x)))
+   127	        );
+   128	
+   129	      case 'textCount':
+   130	        return g['text'] ? text.split(g['text']).length - 1 === g['count'] : false;
+   131	
+   132	      case 'textOrder': {
+   133	        let i = -1;
+   134	        return g['sequence'].every((x: string) => {
+   135	          const j = text.indexOf(x, i + 1);
+   136	          i = j;
+   137	          return j >= 0;
+   138	        });
+   139	      }
+   140	
+   141	      case 'paragraph': {
+   142	        const r = findText(root, g['text']) || (p2 ? findText(p2, g['text']) : null);
+   143	        const b = r?.startContainer.parentElement?.closest('p,h1,h2,h3,li,div') as HTMLElement | null;
+   144	        if (!b) return false;
+   145	
+   146	        const style =
+   147	          b.dataset['paragraphStyle'] ||
+   148	          ({ H1: 'h1', H2: 'h2', H3: 'h3' } as Record<string, string>)[b.tagName] ||
+   149	          'normal';
+   150	        const s = window.getComputedStyle(b);
+   151	        const lineSpacingMatch =
+   152	          g['lineSpacing'] === undefined ||
+   153	          b.style.lineHeight === String(g['lineSpacing']) ||
+   154	          parseFloat(b.style.lineHeight) === Number(g['lineSpacing']) ||
+   155	          b.dataset['lineSpacing'] === String(g['lineSpacing']);
+   156	
+   157	        return (
+   158	          (g['style'] === undefined || style === g['style']) &&
+   159	          (g['align'] === undefined ||
+   160	            (s.textAlign === 'start' ? 'left' : s.textAlign) === g['align']) &&
+   161	          (g['indent'] === undefined ||
+   162	            Math.round(parseFloat(s.marginLeft) / 40) === g['indent']) &&
+   163	          lineSpacingMatch
+   164	        );
+   165	      }
+   166	
+   167	      case 'list': {
+   168	        const checkList = (container: HTMLElement) =>
+   169	          g['items'].every((t: string) => {
+   170	            const r = findText(container, t);
+   171	            const li = r?.startContainer.parentElement?.closest('li');
+   172	            if (!li || li.parentElement?.tagName !== (g['listType'] === 'bullet' ? 'UL' : 'OL')) {
+   173	              return false;
+   174	            }
+   175	            let level = 0;
+   176	            let p: HTMLElement | null = li.parentElement?.parentElement as HTMLElement | null;
+   177	            while (p && p !== container) {
+   178	              if (p.tagName === 'UL' || p.tagName === 'OL') level++;
+   179	              p = p.parentElement;
+   180	            }
+   181	            return g['level'] === undefined || g['level'] === level;
+   182	          });
+   183	        return checkList(root) || (p2 ? checkList(p2) : false);
+   184	      }
+   185	
+   186	      case 'pageSetup':
+   187	        return (
+   188	          matches(this.setup, g, ['orientation', 'paperSize']) &&
+   189	          (!g['margins'] ||
+   190	            Object.entries(g['margins']).every(
+   191	              ([k, v]) => (this.setup.margins as Record<string, number>)[k] === v
+   192	            ))
+   193	        );
+   194	
+   195	      case 'table': {
+   196	        const tables = [...Array.from(root.querySelectorAll('table')), ...(p2 ? Array.from(p2.querySelectorAll('table')) : [])];
+   197	        return tables.some((t) => {
+   198	          const rowsMatch = g['rows'] === undefined || t.rows.length === g['rows'];
+   199	          const colsMatch =
+   200	            g['columns'] === undefined ||
+   201	            Array.from(t.rows).every((r) => r.cells.length === g['columns']);
+   202	          const cellsMatch =
+   203	            !g['cells'] ||
+   204	            g['cells'].every((r: string[], i: number) =>
+   205	              r.every((c: string, j: number) => t.rows[i]?.cells[j]?.textContent === c)
+   206	            );
+   207	          return rowsMatch && colsMatch && cellsMatch;
+   208	        });
+   209	      }
+   210	
+   211	      case 'image': {
+   212	        const images = [...Array.from(root.querySelectorAll('img')), ...(p2 ? Array.from(p2.querySelectorAll('img')) : [])];
+   213	        return images.some((im) => {
+   214	          const fileMatch =
+   215	            !g['file'] ||
+   216	            im.dataset['file'] === g['file'] ||
+   217	            im.src.endsWith('/' + g['file']);
+   218	          const alignMatch =
+   219	            g['align'] === undefined || (im.dataset['align'] || 'left') === g['align'];
+   220	          const wrapMatch =
+   221	            g['wrap'] === undefined || (im.dataset['wrap'] || 'inline') === g['wrap'];
+   222	          const minW = g['minWidth'] === undefined || im.width >= g['minWidth'];
+   223	          const maxW = g['maxWidth'] === undefined || im.width <= g['maxWidth'];
+   224	          return fileMatch && alignMatch && wrapMatch && minW && maxW;
+   225	        });
+   226	      }
+   227	
+   228	      case 'element':
+   229	        if (g['element'] === 'pageBreak') {
+   230	          return this.hasPageBreak || !!root.querySelector('[data-element="pageBreak"]') || !!p2?.querySelector('[data-element="pageBreak"]');
+   231	        }
+   232	        if (g['element'] === 'header' || g['element'] === 'footer') {
+   233	          const val = g['element'] === 'header' ? this.header : this.footer;
+   234	          return !!val && (!g['text'] || val.includes(g['text']));
+   235	        }
+   236	        if (g['element'] === 'pageNumbers') return this.numbering;
+   237	        if (
+   238	          g['element'] === 'comment' &&
+   239	          this.comments.some(
+   240	            (c) =>
+   241	              (!g['text'] || c.text.includes(g['text']) || c.comment.includes(g['text'])) &&
+   242	              (g['resolved'] === undefined || c.resolved === g['resolved'])
+   243	          )
+   244	        ) {
+   245	          return true;
+   246	        }
+   247	        if (g['element'] === 'tableOfContents') {
+   248	          return !!root.querySelector('.table-of-contents, [data-element="tableOfContents"], nav.toc') ||
+   249	                 !!p2?.querySelector('.table-of-contents, [data-element="tableOfContents"], nav.toc');
+   250	        }
+   251	        if (g['element'] === 'footnote') {
+   252	          return !!root.querySelector('.footnote, [data-element="footnote"], sup.footnote-ref') ||
+   253	                 !!p2?.querySelector('.footnote, [data-element="footnote"], sup.footnote-ref');
+   254	        }
+   255	        const elements = [...Array.from(root.querySelectorAll('[data-element]')), ...(p2 ? Array.from(p2.querySelectorAll('[data-element]')) : [])];
+   256	        return elements.some((n: any) => {
+   257	          return (
+   258	            n.dataset['element'] === g['element'] &&
+   259	            (!g['text'] || n.textContent?.includes(g['text'])) &&
+   260	            (g['resolved'] === undefined || (n.dataset['resolved'] === 'true') === g['resolved'])
+   261	          );
+   262	        });
+   263	
+   264	      case 'action':
+   265	        return this.actions.some((a) => matches(a, g, ['action', 'text']));
+   266	
+   267	      default:
+   268	        return false;
+   269	    }
+   270	  }
+   271	
+   272	  demo(g: Record<string, any>, activity?: ActivityPayload): void {
+   273	    if (!this.editorElement) return;
+   274	    const root = this.editorElement;
+   275	
+   276	    switch (g['type']) {
+   277	      case 'textStyle': {
+   278	        const r = findText(root, g['text']);
+   279	        if (r && this.rich) {
+   280	          setSelection(r);
+   281	          this.rich.capture();
+   282	          if (g['bold']) this.rich.command('bold');
+   283	          if (g['italic']) this.rich.command('italic');
+   284	          if (g['underline']) this.rich.command('underline');
+   285	          if (g['font']) this.rich.apply({ fontFamily: g['font'] });
+   286	          if (g['size']) this.rich.apply({ fontSize: g['size'] + 'pt' });
+   287	          if (g['color']) this.rich.apply({ color: COLORS[g['color']] || g['color'] });
+   288	          if (g['highlight'])
+   289	            this.rich.apply({ backgroundColor: COLORS[g['highlight']] || g['highlight'] });
+   290	        }
+   291	        break;
+   292	      }
+   293	
+   294	      case 'paragraph': {
+   295	        const r = findText(root, g['text']);
+   296	        if (r) {
+   297	          const b = r.startContainer.parentElement?.closest('p,h1,h2,h3,li,div') as HTMLElement | null;
+   298	          if (b) {
+   299	            if (g['align']) b.style.textAlign = g['align'];
+   300	            if (g['indent'] !== undefined) b.style.marginLeft = g['indent'] * 40 + 'px';
+   301	            if (g['lineSpacing'] !== undefined) {
+   302	              b.style.lineHeight = String(g['lineSpacing']);
+   303	              b.dataset['lineSpacing'] = String(g['lineSpacing']);
+   304	            }
+   305	            if (g['style']) {
+   306	              b.dataset['paragraphStyle'] = g['style'];
+   307	              const tagName = (g['style'] === 'h1' || g['style'] === 'h2' || g['style'] === 'h3') ? g['style'] : 'p';
+   308	              const rep = document.createElement(tagName);
+   309	              rep.innerHTML = b.innerHTML;
+   310	              rep.dataset['paragraphStyle'] = g['style'];
+   311	              if (g['style'] === 'title') {
+   312	                rep.classList.add('doc-title');
+   313	              } else if (g['style'] === 'subtitle') {
+   314	                rep.classList.add('doc-subtitle');
+   315	              }
+   316	              b.replaceWith(rep);
+   317	            }
+   318	          }
+   319	        }
+   320	        break;
+   321	      }
+   322	
+   323	      case 'list': {
+   324	        const ul = document.createElement(g['listType'] === 'bullet' ? 'ul' : 'ol');
+   325	        (g['items'] || []).forEach((it: string) => {
+   326	          const li = document.createElement('li');
+   327	          li.textContent = it;
+   328	          ul.append(li);
+   329	        });
+   330	        root.append(ul);
+   331	        break;
+   332	      }
+   333	
+   334	      case 'table': {
+   335	        const rows = g['rows'] || 2;
+   336	        const cols = g['columns'] || 2;
+   337	        const tbl = document.createElement('table');
+   338	        tbl.className = 'doc-table';
+   339	        for (let i = 0; i < rows; i++) {
+   340	          const tr = tbl.insertRow();
+   341	          for (let j = 0; j < cols; j++) {
+   342	            const td = tr.insertCell();
+   343	            td.textContent = g['cells']?.[i]?.[j] || 'Cell';
+   344	          }
+   345	        }
+   346	        root.append(tbl);
+   347	        break;
+   348	      }
+   349	
+   350	      case 'image': {
+   351	        const img = document.createElement('img');
+   352	        img.src = safeAsset(activity?.assetBaseUrl || '', g['file'] || 'photo.png');
+   353	        img.dataset['file'] = g['file'];
+   354	        if (g['align']) img.dataset['align'] = g['align'];
+   355	        if (g['wrap']) img.dataset['wrap'] = g['wrap'];
+   356	        if (g['minWidth']) img.width = g['minWidth'];
+   357	        root.append(img);
+   358	        break;
+   359	      }
+   360	
+   361	      case 'pageSetup': {
+   362	        if (g['orientation']) this.setup.orientation = g['orientation'];
+   363	        if (g['paperSize']) this.setup.paperSize = g['paperSize'];
+   364	        if (g['margins']) Object.assign(this.setup.margins, g['margins']);
+   365	        break;
+   366	      }
+   367	
+   368	      case 'element': {
+   369	        if (g['element'] === 'header') this.header = g['text'] || 'Header';
+   370	        else if (g['element'] === 'footer') this.footer = g['text'] || 'Footer';
+   371	        else if (g['element'] === 'pageNumbers') this.numbering = true;
+   372	        else if (g['element'] === 'tableOfContents') {
+   373	          const toc = document.createElement('div');
+   374	          toc.className = 'table-of-contents';
+   375	          toc.dataset['element'] = 'tableOfContents';
+   376	          toc.innerHTML = '<h3 class="toc-title">Table of Contents</h3><ul class="toc-list"><li>Heading 1</li></ul>';
+   377	          root.prepend(toc);
+   378	        } else if (g['element'] === 'footnote') {
+   379	          const fn = document.createElement('div');
+   380	          fn.className = 'footnote';
+   381	          fn.dataset['element'] = 'footnote';
+   382	          fn.innerHTML = '<hr><p><sup>1</sup> Footnote text</p>';
+   383	          root.append(fn);
+   384	        } else {
+   385	          const el = document.createElement('div');
+   386	          el.dataset['element'] = g['element'];
+   387	          el.textContent = g['text'] || g['element'];
+   388	          root.append(el);
+   389	        }
+   390	        break;
+   391	      }
+   392	
+   393	      case 'textContains': {
+   394	        let currentHtml = root.innerHTML;
+   395	        const notList = (g['notContains'] || []) as string[];
+   396	        const conList = (g['contains'] || []) as string[];
+   397	        notList.forEach((wrong, idx) => {
+   398	          const replacement = conList[idx] || conList[0] || '';
+   399	          if (wrong && replacement) {
+   400	            currentHtml = currentHtml.split(wrong).join(replacement);
+   401	          }
+   402	        });
+   403	        root.innerHTML = currentHtml;
+   404	        const text = root.textContent || '';
+   405	        conList.forEach((req) => {
+   406	          if (!text.includes(req)) {
+   407	            const p = document.createElement('p');
+   408	            p.textContent = req;
+   409	            root.append(p);
+   410	          }
+   411	        });
+   412	        break;
+   413	      }
+   414	
+   415	      case 'textCount': {
+   416	        const target = g['text'];
+   417	        const needed = g['count'];
+   418	        if (target && typeof needed === 'number') {
+   419	          let text = root.textContent || '';
+   420	          let currentCount = text.split(target).length - 1;
+   421	          while (currentCount < needed) {
+   422	            const p = document.createElement('p');
+   423	            p.textContent = target;
+   424	            root.append(p);
+   425	            currentCount++;
+   426	          }
+   427	          if (currentCount > needed) {
+   428	            let html = root.innerHTML;
+   429	            while (currentCount > needed && html.includes(target)) {
+   430	              html = html.replace(target, '');
+   431	              currentCount--;
+   432	            }
+   433	            root.innerHTML = html;
+   434	          }
+   435	        }
+   436	        break;
+   437	      }
+   438	
+   439	      case 'textOrder': {
+   440	        const seq = (g['sequence'] || []) as string[];
+   441	        if (seq.length > 0) {
+   442	          const p = document.createElement('p');
+   443	          p.textContent = seq.join(' ');
+   444	          root.append(p);
+   445	        }
+   446	        break;
+   447	      }
+   448	
+   449	      case 'action':
+   450	        this.logAction(g['action'], g['text']);
+   451	        break;
+   452	    }
+   453	  }
+   454	
+   455	  snapshot(): Record<string, any> {
+   456	    return {
+   457	      html: this.editorElement ? this.editorElement.innerHTML : this.html,
+   458	      setup: clone(this.setup),
+   459	      header: this.header,
+   460	      footer: this.footer,
+   461	      numbering: this.numbering,
+   462	      hasPageBreak: this.hasPageBreak,
+   463	      page2Html: this.page2Element ? this.page2Element.innerHTML : '',
+   464	      comments: clone(this.comments),
+   465	      styles: clone(this.styles),
+   466	      actions: clone(this.actions),
+   467	    };
+   468	  }
+   469	
+   470	  restore(s: Record<string, any>): void {
+   471	    this.html = s['html'] || '';
+   472	    if (this.editorElement) {
+   473	      this.editorElement.innerHTML = this.html;
+   474	    }
+   475	    this.hasPageBreak = !!s['hasPageBreak'];
+   476	    if (this.page2Element) {
+   477	      this.page2Element.innerHTML = s['page2Html'] || '';
+   478	    }
+   479	    this.setup = clone(s['setup']);
+   480	    this.header = s['header'] || '';
+   481	    this.footer = s['footer'] || '';
+   482	    this.numbering = !!s['numbering'];
+   483	    this.comments = clone(s['comments'] || []);
+   484	    this.styles = clone(s['styles'] || {});
+   485	    this.actions = clone(s['actions'] || []);
+   486	  }
+   487	}

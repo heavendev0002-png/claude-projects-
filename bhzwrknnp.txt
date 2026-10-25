@@ -1,0 +1,801 @@
+===== index.html
+     1	<!DOCTYPE html>
+     2	<html lang="en">
+     3	<head>
+     4	  <meta charset="UTF-8" />
+     5	  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+     6	  <title>WordHost LMS &middot; Lessons</title>
+     7	  <link rel="icon" href="assets/logo.svg" />
+     8	  <link rel="stylesheet" href="css/styles.css?v=3" />
+     9	</head>
+    10	<body class="list-page-body">
+    11	  <div class="list-page">
+    12	    <header class="list-header">
+    13	      <div class="brand">
+    14	        <img src="assets/logo.svg" alt="" />
+    15	        <div>
+    16	          <h1>WordHost LMS</h1>
+    17	          <span>Word Processing Simulator</span>
+    18	        </div>
+    19	      </div>
+    20	    </header>
+    21	
+    22	    <section class="list-intro">
+    23	      <h2>Lessons &amp; Assessments</h2>
+    24	      <p>Choose an activity to launch the Word Processing Simulator.</p>
+    25	    </section>
+    26	
+    27	    <main id="grid" class="grid" aria-label="Available lessons and assessments"></main>
+    28	    <noscript>
+    29	      <p>This demo requires JavaScript to run the embedded learning activity.</p>
+    30	    </noscript>
+    31	  </div>
+    32	
+    33	  <script src="js/config.js?v=3"></script>
+    34	  <script src="js/lessons.js?v=3"></script>
+    35	  <script src="js/task-list.js?v=3"></script>
+    36	</body>
+    37	</html>
+===== activity.html
+     1	<!DOCTYPE html>
+     2	<html lang="en">
+     3	<head>
+     4	  <meta charset="UTF-8" />
+     5	  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+     6	  <title>WordHost LMS &middot; Activity</title>
+     7	  <link rel="icon" href="assets/logo.svg" />
+     8	  <link rel="stylesheet" href="css/styles.css?v=4" />
+     9	</head>
+    10	<body>
+    11	  <!-- Error / not-found state -->
+    12	  <div id="stateError" class="state-wrap" hidden>
+    13	    <div>
+    14	      <h1>Activity not found</h1>
+    15	      <p>We couldn't find the lesson you tried to launch.</p>
+    16	      <a class="btn btn-primary" href="index.html">Back to Lesson List</a>
+    17	    </div>
+    18	  </div>
+    19	
+    20	  <!-- Activity runner -->
+    21	  <div id="runner" class="runner" hidden>
+    22	    <header class="runner-header">
+    23	      <a class="btn btn-ghost btn-sm" id="backBtn" href="index.html" title="Back to lesson list">
+    24	        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+    25	             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    26	          <path d="M15 18l-6-6 6-6" />
+    27	        </svg>
+    28	        <span>Back</span>
+    29	      </a>
+    30	
+    31	      <div class="runner-title">
+    32	        <span class="crumb" id="modeCrumb">Activity</span>
+    33	        <h1 id="lessonTitle">&nbsp;</h1>
+    34	      </div>
+    35	
+    36	      <div class="status is-waiting" id="status" role="status" aria-live="polite">
+    37	        <span class="led" aria-hidden="true"></span>
+    38	        <span class="label" id="statusLabel">Waiting for activity&hellip;</span>
+    39	      </div>
+    40	
+    41	      <div class="controls">
+    42	        <button class="btn btn-sm" id="pauseBtn" type="button" aria-pressed="false" title="Pause the activity">
+    43	          <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+    44	            <rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>
+    45	          </svg>
+    46	          <span id="pauseLabel">Pause</span>
+    47	        </button>
+    48	
+    49	        <button class="btn btn-sm" id="finishBtn" type="button" title="Force the activity to finish">
+    50	          <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+    51	            <path d="M5 4h14v16H5z"/>
+    52	          </svg>
+    53	          <span>Force Finish</span>
+    54	        </button>
+    55	
+    56	        <span class="divider" aria-hidden="true"></span>
+    57	
+    58	        <button class="btn btn-sm" id="themeBtn" type="button" aria-pressed="false" title="Toggle the activity theme">
+    59	          <svg id="themeIcon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+    60	               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    61	            <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+    62	          </svg>
+    63	          <span id="themeLabel">Light</span>
+    64	        </button>
+    65	
+    66	        <button class="btn btn-sm btn-icon" id="reloadBtn" type="button" title="Reload the activity">
+    67	          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+    68	               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    69	            <path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/>
+    70	          </svg>
+    71	          <span class="sr-only">Reload activity</span>
+    72	        </button>
+    73	      </div>
+    74	    </header>
+    75	
+    76	    <div class="banners" id="banners"></div>
+    77	
+    78	    <div class="stage" id="stage">
+    79	      <iframe
+    80	        id="pluginFrame"
+    81	        title="Word Processing Simulator"
+    82	        allow="clipboard-read; clipboard-write; fullscreen"
+    83	        referrerpolicy="no-referrer"></iframe>
+    84	
+    85	      <div class="stage-hint" id="stageHint">
+    86	        <span>Waiting for the activity to connect at
+    87	          <code id="hintUrl">http://localhost:4200/</code></span>
+    88	      </div>
+    89	
+    90	      <div class="overlay" id="overlay">
+    91	        <div class="overlay-card" id="overlayCard">
+    92	          <div class="overlay-icon" id="overlayIcon"></div>
+    93	          <h2 id="overlayTitle">Lesson complete!</h2>
+    94	          <p id="overlayText"></p>
+    95	          <div class="overlay-score" id="overlayScore"></div>
+    96	          <p class="overlay-next" id="overlayNext" hidden></p>
+    97	          <div class="overlay-actions">
+    98	            <button class="btn" id="overlayStayBtn" type="button" hidden>Stay on this lesson</button>
+    99	            <a class="btn btn-primary" href="index.html">Back to Lesson List</a>
+   100	          </div>
+   101	        </div>
+   102	      </div>
+   103	    </div>
+   104	  </div>
+   105	
+   106	  <script src="js/config.js?v=4"></script>
+   107	  <script src="js/lessons.js?v=4"></script>
+   108	  <script src="js/activity-runner.js?v=4"></script>
+   109	</body>
+   110	</html>
+===== js/config.js
+     1	/*
+     2	 * WordHost LMS - application configuration
+     3	 * ----------------------------------------
+     4	 * Single place to change environment-specific values.
+     5	 * The embedded learning activity URL will move to a production URL later,
+     6	 * so it lives here as one configurable constant.
+     7	 */
+     8	window.APP_CONFIG = {
+     9	  // URL of the third-party Word Processing Simulator embedded in the iframe.
+    10	  pluginUrl: "http://localhost:4200/",
+    11	
+    12	  // Internal pages.
+    13	  listPage: "index.html",
+    14	  activityPage: "activity.html",
+    15	
+    16	  // Key used to persist the selected lesson across the two pages.
+    17	  selectionKey: "wordhost.lms.selectedLesson"
+    18	};
+===== js/lessons.js
+     1	/*
+     2	 * WordHost LMS - sample lesson data
+     3	 * ---------------------------------
+     4	 * Static content for the host. This is the real contract passed to the
+     5	 * embedded activity; field names must not change.
+     6	 */
+     7	window.LESSONS = [
+     8	  {
+     9	    "mode": "lesson",
+    10	    "title": "Personalize the Certificate",
+    11	    "assetBaseUrl": "./assets/",
+    12	    "theme": "LIGHT",
+    13	    "variables": { "studentName": "Jordan Patel", "achievement": "Top Reader" },
+    14	    "tasks": [{
+    15	      "title": "Insert student name",
+    16	      "explanation": "Variables let you personalize a document automatically with real data, like a student's name.",
+    17	      "instructions": ["Open Tools > Variables.", "Select `studentName` and click Insert."],
+    18	      "hint": "Click Tools, then Variables, select studentName, and click Insert.",
+    19	      "startingDocument": "<h1>Certificate of Achievement</h1><p>This certifies that</p>",
+    20	      "goals": [{ "type": "element", "element": "variable", "text": "Jordan Patel" }],
+    21	      "showMeHow": true
+    22	    }]
+    23	  },
+    24	  {
+    25	    "mode": "lesson",
+    26	    "title": "Address Reviewer Feedback",
+    27	    "assetBaseUrl": "./assets/",
+    28	    "theme": "LIGHT",
+    29	    "comments": [{ "text": "the introduction", "comment": "Make this more engaging for readers." }],
+    30	    "tasks": [{
+    31	      "title": "Resolve the comment",
+    32	      "explanation": "Comments left by a reviewer should be addressed and marked resolved once handled.",
+    33	      "instructions": ["Read the comment on `the introduction`.", "Click the checkmark to resolve it."],
+    34	      "hint": "Find the comment in the right margin and click its resolve checkmark.",
+    35	      "startingDocument": "<p>Welcome to the introduction of our annual report.</p>",
+    36	      "goals": [{ "type": "element", "element": "comment", "resolved": true }],
+    37	      "showMeHow": false
+    38	    }]
+    39	  },
+    40	  {
+    41	    "mode": "assessment",
+    42	    "title": "Newsletter Draft",
+    43	    "assetBaseUrl": "./assets/",
+    44	    "theme": "LIGHT",
+    45	    "tasks": [
+    46	      {
+    47	        "title": "Bold the headline",
+    48	        "explanation": "Bold text draws attention to the most important words.",
+    49	        "instructions": ["Select the word `Exciting`.", "Click the Bold (B) button."],
+    50	        "hint": "Double-click Exciting, then click B.",
+    51	        "startingDocument": "<p>Exciting news from our team this month.</p>",
+    52	        "goals": [{ "type": "textStyle", "text": "Exciting", "bold": true }],
+    53	        "showMeHow": true
+    54	      },
+    55	      {
+    56	        "title": "Add a bulleted list",
+    57	        "explanation": "Bulleted lists make key points easy to scan.",
+    58	        "instructions": ["Add `Launch`, `Growth`, `Thanks` as a bulleted list below the text."],
+    59	        "hint": "Type each item on its own line, select them, and click the bullet list button.",
+    60	        "startingDocument": null,
+    61	        "goals": [{ "type": "list", "items": ["Launch", "Growth", "Thanks"], "listType": "bullet", "level": 0 }],
+    62	        "showMeHow": true
+    63	      },
+    64	      {
+    65	        "title": "Center the headline",
+    66	        "explanation": "Centering the headline balances the top of the newsletter.",
+    67	        "instructions": ["Click inside the headline.", "Click Center Align."],
+    68	        "hint": "Click inside the first line, then click the Center align icon.",
+    69	        "startingDocument": null,
+    70	        "goals": [{ "type": "paragraph", "text": "Exciting news from our team this month.", "align": "center" }],
+    71	        "showMeHow": true
+    72	      }
+    73	    ]
+    74	  },
+    75	  {
+    76	    "mode": "lesson",
+    77	    "title": "Highlight the Key Term",
+    78	    "assetBaseUrl": "./assets/",
+    79	    "theme": "LIGHT",
+    80	    "tasks": [{
+    81	      "title": "Format and align",
+    82	      "explanation": "Combining bold, underline, and centered alignment makes a term impossible to miss.",
+    83	      "instructions": ["Select the word `Important`.", "Make it bold and underlined.", "Center the paragraph it's in."],
+    84	      "hint": "Select Important, click B and U, then click inside the line and click Center.",
+    85	      "startingDocument": "<p>This is an Important update for all staff.</p>",
+    86	      "goals": [
+    87	        { "type": "textStyle", "text": "Important", "bold": true, "underline": true },
+    88	        { "type": "paragraph", "text": "Important", "align": "center" }
+    89	      ],
+    90	      "showMeHow": true
+    91	    }]
+    92	  },
+    93	  {
+    94	    "mode": "lesson",
+    95	    "title": "Duplicate the Disclaimer",
+    96	    "assetBaseUrl": "./assets/",
+    97	    "theme": "LIGHT",
+    98	    "tasks": [{
+    99	      "title": "Copy and paste text",
+   100	      "explanation": "Copy and paste lets you duplicate text quickly instead of retyping it.",
+   101	      "instructions": ["Select the sentence `This offer expires soon.`", "Copy it, then paste it on a new line."],
+   102	      "hint": "Select the sentence, press Ctrl+C, click below it, and press Ctrl+V.",
+   103	      "startingDocument": "<p>This offer expires soon.</p>",
+   104	      "goals": [{ "type": "action", "action": "paste" }],
+   105	      "showMeHow": true
+   106	    }]
+   107	  }
+   108	];
+===== js/task-list.js
+     1	/*
+     2	 * WordHost LMS - Page 1: Task List
+     3	 * Renders the available lessons/assessments as cards and hands the selected
+     4	 * lesson off to the Activity Runner (Page 2).
+     5	 */
+     6	(function () {
+     7	  "use strict";
+     8	
+     9	  var cfg = window.APP_CONFIG;
+    10	  var lessons = window.LESSONS || [];
+    11	  var grid = document.getElementById("grid");
+    12	
+    13	  var PLAY_ICON =
+    14	    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
+    15	    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    16	    '<path d="M5 3l14 9-14 9V3z" fill="currentColor" stroke="none"/></svg>';
+    17	
+    18	  function escapeHtml(str) {
+    19	    return String(str == null ? "" : str)
+    20	      .replace(/&/g, "&amp;")
+    21	      .replace(/</g, "&lt;")
+    22	      .replace(/>/g, "&gt;")
+    23	      .replace(/"/g, "&quot;")
+    24	      .replace(/'/g, "&#39;");
+    25	  }
+    26	
+    27	  // The lesson contract has no description field, so we surface the first
+    28	  // task's explanation as a concise "what you'll learn" summary.
+    29	  function describe(lesson) {
+    30	    var first = lesson.tasks && lesson.tasks[0];
+    31	    return (first && first.explanation) || "Practice core document editing skills.";
+    32	  }
+    33	
+    34	  function launch(index) {
+    35	    try {
+    36	      sessionStorage.setItem(cfg.selectionKey, JSON.stringify({ index: index }));
+    37	    } catch (e) {
+    38	      /* storage may be unavailable; the URL param is the source of truth */
+    39	    }
+    40	    window.location.href = cfg.activityPage + "?lesson=" + index;
+    41	  }
+    42	
+    43	  function render() {
+    44	    if (!grid) return;
+    45	    grid.innerHTML = "";
+    46	
+    47	    lessons.forEach(function (lesson, index) {
+    48	      var isAssessment = lesson.mode === "assessment";
+    49	      var taskCount = (lesson.tasks || []).length;
+    50	
+    51	      var card = document.createElement("article");
+    52	      card.className = "card" + (isAssessment ? " is-assessment" : "");
+    53	      card.tabIndex = 0;
+    54	      card.setAttribute("role", "link");
+    55	      card.setAttribute("aria-label", "Start " + lesson.title);
+    56	
+    57	      card.innerHTML =
+    58	        '<div class="card-top">' +
+    59	          '<span class="badge' + (isAssessment ? " assessment" : "") + '">' +
+    60	            '<span class="dot"></span>' + (isAssessment ? "Assessment" : "Lesson") +
+    61	          '</span>' +
+    62	          '<span class="task-count">' + taskCount + (taskCount === 1 ? " task" : " tasks") + '</span>' +
+    63	        '</div>' +
+    64	        '<h3 class="card-title">' + escapeHtml(lesson.title) + '</h3>' +
+    65	        '<p class="card-desc">' + escapeHtml(describe(lesson)) + '</p>' +
+    66	        '<div class="card-foot">' +
+    67	          '<span class="meta">' + (isAssessment ? "Graded activity" : "Guided practice") + '</span>' +
+    68	          '<button class="btn btn-primary start" type="button">' +
+    69	            PLAY_ICON + '<span>Start</span>' +
+    70	          '</button>' +
+    71	        '</div>';
+    72	
+    73	      card.querySelector(".start").addEventListener("click", function (event) {
+    74	        event.stopPropagation();
+    75	        launch(index);
+    76	      });
+    77	      card.addEventListener("click", function () { launch(index); });
+    78	      card.addEventListener("keydown", function (event) {
+    79	        if (event.key === "Enter" || event.key === " ") {
+    80	          event.preventDefault();
+    81	          launch(index);
+    82	        }
+    83	      });
+    84	
+    85	      grid.appendChild(card);
+    86	    });
+    87	  }
+    88	
+    89	  render();
+    90	})();
+===== js/activity-runner.js
+     1	/*
+     2	 * WordHost LMS - Page 2: Activity Runner
+     3	 * --------------------------------------
+     4	 * Embeds the third-party Word Processing Simulator in an iframe and speaks the
+     5	 * host <-> plugin postMessage protocol:
+     6	 *
+     7	 *   plugin -> host   { type: 'PLUGIN_EVENT', name: 'pluginReady' }
+     8	 *   host   -> plugin { type: 'PLUGIN_DATA_IN', payload: <selected lesson> }
+     9	 *   plugin -> host   { type: 'PLUGIN_EVENT', name: 'activityCompleted', payload: { completed, tasksPassed, tasksTotal } }
+    10	 *   plugin -> host   { type: 'PLUGIN_EVENT', name: 'pluginError', message: string }
+    11	 *
+    12	 * Host controls send: PAUSE, FORCE_FINISH and PREFERENCE_CHANGED.
+    13	 *
+    14	 * We deliberately make no assumptions about the plugin internals - we only
+    15	 * relay messages and render the host chrome around it.
+    16	 */
+    17	(function () {
+    18	  "use strict";
+    19	
+    20	  var cfg = window.APP_CONFIG;
+    21	  var lessons = window.LESSONS || [];
+    22	
+    23	  // ---- Resolve the selected lesson (URL param is the source of truth) -----
+    24	  function resolveSelection() {
+    25	    var index = parseInt(new URLSearchParams(window.location.search).get("lesson"), 10);
+    26	    if (isNaN(index) || !lessons[index]) {
+    27	      try {
+    28	        var saved = JSON.parse(sessionStorage.getItem(cfg.selectionKey) || "null");
+    29	        if (saved && lessons[saved.index]) index = saved.index;
+    30	      } catch (e) {
+    31	        /* ignore */
+    32	      }
+    33	    }
+    34	    return { index: index, lesson: lessons[index] || null };
+    35	  }
+    36	
+    37	  var selection = resolveSelection();
+    38	  var currentIndex = selection.index;
+    39	  var lesson = selection.lesson; // reassigned as we auto-advance through the list
+    40	
+    41	  var runner = document.getElementById("runner");
+    42	  var stateError = document.getElementById("stateError");
+    43	
+    44	  if (!lesson) {
+    45	    stateError.hidden = false;
+    46	    return;
+    47	  }
+    48	  runner.hidden = false;
+    49	
+    50	  // ---- Elements -----------------------------------------------------------
+    51	  var iframe = document.getElementById("pluginFrame");
+    52	  var stageHint = document.getElementById("stageHint");
+    53	  var statusEl = document.getElementById("status");
+    54	  var statusLabel = document.getElementById("statusLabel");
+    55	  var banners = document.getElementById("banners");
+    56	  var overlay = document.getElementById("overlay");
+    57	  var overlayCard = document.getElementById("overlayCard");
+    58	  var overlayTitle = document.getElementById("overlayTitle");
+    59	  var overlayText = document.getElementById("overlayText");
+    60	  var overlayScore = document.getElementById("overlayScore");
+    61	  var overlayIcon = document.getElementById("overlayIcon");
+    62	  var overlayNext = document.getElementById("overlayNext");
+    63	  var overlayStayBtn = document.getElementById("overlayStayBtn");
+    64	  var pauseBtn = document.getElementById("pauseBtn");
+    65	  var pauseLabel = document.getElementById("pauseLabel");
+    66	  var finishBtn = document.getElementById("finishBtn");
+    67	  var themeBtn = document.getElementById("themeBtn");
+    68	  var themeLabel = document.getElementById("themeLabel");
+    69	  var reloadBtn = document.getElementById("reloadBtn");
+    70	
+    71	  // ---- Session state ------------------------------------------------------
+    72	  var completedHandled = false; // only act on the FIRST activityCompleted per lesson
+    73	  var paused = false;
+    74	  var theme = lesson.theme === "DARK" ? "DARK" : "LIGHT";
+    75	  var ready = false;
+    76	  var advanceTimer = null; // pending auto-advance after a completion
+    77	
+    78	  // ---- Header content -----------------------------------------------------
+    79	  function renderHeader() {
+    80	    var count = lesson.tasks ? lesson.tasks.length : 0;
+    81	    document.getElementById("lessonTitle").textContent = lesson.title;
+    82	    document.getElementById("modeCrumb").textContent =
+    83	      (lesson.mode === "assessment" ? "Assessment" : "Lesson") +
+    84	      " " + (currentIndex + 1) + " of " + lessons.length +
+    85	      " \u00b7 " + count + " task" + (count === 1 ? "" : "s");
+    86	  }
+    87	  document.getElementById("hintUrl").textContent = cfg.pluginUrl;
+    88	  renderHeader();
+    89	
+    90	  // ---- Theme --------------------------------------------------------------
+    91	  function applyTheme(next, notify) {
+    92	    theme = next === "DARK" ? "DARK" : "LIGHT";
+    93	    var dark = theme === "DARK";
+    94	    document.body.classList.toggle("dark", dark);
+    95	    themeLabel.textContent = dark ? "Dark" : "Light";
+    96	    themeBtn.setAttribute("aria-pressed", String(dark));
+    97	    if (notify) {
+    98	      send({ type: "PREFERENCE_CHANGED", payload: { type: "theme", value: theme } });
+    99	    }
+   100	  }
+   101	
+   102	  // ---- Plugin messaging ---------------------------------------------------
+   103	  function send(message) {
+   104	    if (!iframe.contentWindow) return;
+   105	    // Target origin is kept permissive ('*') as specified by the protocol.
+   106	    iframe.contentWindow.postMessage(message, "*");
+   107	  }
+   108	
+   109	  function sendLessonData() {
+   110	    send({ type: "PLUGIN_DATA_IN", payload: lesson });
+   111	  }
+   112	
+   113	  function setStatus(state) {
+   114	    statusEl.classList.remove("is-waiting", "is-connected", "is-complete");
+   115	    statusEl.classList.add("is-" + state);
+   116	    statusLabel.textContent =
+   117	      state === "connected" ? "Connected" :
+   118	      state === "complete" ? "Complete" :
+   119	      "Waiting for activity\u2026";
+   120	  }
+   121	
+   122	  function showBanner(message) {
+   123	    var el = document.createElement("div");
+   124	    el.className = "banner banner-error";
+   125	    el.setAttribute("role", "alert");
+   126	    el.innerHTML =
+   127	      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+   128	      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+   129	      '<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>' +
+   130	      '<span></span>' +
+   131	      '<button class="btn btn-ghost btn-sm banner-close" type="button" aria-label="Dismiss">Dismiss</button>';
+   132	    el.querySelector("span").textContent = message;
+   133	    el.querySelector(".banner-close").addEventListener("click", function () {
+   134	      el.remove();
+   135	    });
+   136	    banners.appendChild(el);
+   137	  }
+   138	
+   139	  // ---- Connection watchdog ------------------------------------------------
+   140	  // If the activity never announces itself, surface a helpful message instead
+   141	  // of leaving the user staring at a blank iframe.
+   142	  var connectTimer = null;
+   143	
+   144	  function startConnectWatchdog() {
+   145	    window.clearTimeout(connectTimer);
+   146	    connectTimer = window.setTimeout(function () {
+   147	      if (!ready) {
+   148	        showBanner(
+   149	          "The activity at " + cfg.pluginUrl + " hasn\u2019t connected yet. " +
+   150	          "Make sure the Word Processing Simulator is running there, then click Reload."
+   151	        );
+   152	      }
+   153	    }, 8000);
+   154	  }
+   155	
+   156	  // ---- Completion overlay (first completion only) -------------------------
+   157	  var ICON_CHECK =
+   158	    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" ' +
+   159	    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
+   160	  var ICON_FLAG =
+   161	    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
+   162	    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+   163	    '<path d="M4 22V4M4 5h12l-2 3 2 3H4"/></svg>';
+   164	
+   165	  function handleCompleted(payload) {
+   166	    if (completedHandled) return; // ignore repeats within the session
+   167	    completedHandled = true;
+   168	    setStatus("complete");
+   169	    stageHint.classList.add("hidden");
+   170	
+   171	    payload = payload || {};
+   172	    var passed = typeof payload.tasksPassed === "number" ? payload.tasksPassed : 0;
+   173	    var total = typeof payload.tasksTotal === "number"
+   174	      ? payload.tasksTotal
+   175	      : (lesson.tasks ? lesson.tasks.length : 0);
+   176	    var completed = payload.completed === true;
+   177	    var hasNext = currentIndex + 1 < lessons.length;
+   178	
+   179	    overlayCard.classList.toggle("failed", !completed);
+   180	    overlayIcon.innerHTML = completed ? ICON_CHECK : ICON_FLAG;
+   181	
+   182	    if (completed) {
+   183	      overlayTitle.textContent =
+   184	        hasNext ? "Lesson complete!" : "You\u2019ve completed all lessons!";
+   185	      overlayText.textContent = "You passed " + passed + " of " + total + " tasks" +
+   186	        (hasNext ? "." : " \u2014 great work!");
+   187	    } else {
+   188	      overlayTitle.textContent =
+   189	        hasNext ? "You didn\u2019t finish this time" : "You\u2019ve completed all lessons!";
+   190	      overlayText.textContent = "You passed " + passed + " of " + total + " tasks" +
+   191	        (hasNext ? " \u2014 moving to the next lesson." : ".");
+   192	    }
+   193	    overlayScore.textContent = passed + " / " + total;
+   194	
+   195	    if (hasNext) {
+   196	      // Auto-advance is the default: load the next lesson into the SAME iframe.
+   197	      var nextLesson = lessons[currentIndex + 1];
+   198	      overlayNext.hidden = false;
+   199	      overlayNext.textContent = "Loading next lesson: " + nextLesson.title;
+   200	      overlayStayBtn.hidden = false; // allow the user to bail out
+   201	      window.clearTimeout(advanceTimer);
+   202	      advanceTimer = window.setTimeout(advanceToNext, 1000);
+   203	    } else {
+   204	      // Final lesson - nothing left to advance to.
+   205	      overlayNext.hidden = true;
+   206	      overlayStayBtn.hidden = true;
+   207	    }
+   208	
+   209	    overlay.classList.add("show");
+   210	  }
+   211	
+   212	  // Sends the next lesson to the already-loaded iframe. No navigation away.
+   213	  function advanceToNext() {
+   214	    window.clearTimeout(advanceTimer);
+   215	    var nextIndex = currentIndex + 1;
+   216	    if (nextIndex >= lessons.length) return; // guard: nothing to advance to
+   217	
+   218	    currentIndex = nextIndex;
+   219	    lesson = lessons[currentIndex];
+   220	
+   221	    try {
+   222	      sessionStorage.setItem(cfg.selectionKey, JSON.stringify({ index: currentIndex }));
+   223	      history.replaceState(null, "", cfg.activityPage + "?lesson=" + currentIndex);
+   224	    } catch (e) {
+   225	      /* non-fatal: URL stays on the originally launched lesson */
+   226	    }
+   227	
+   228	    // Reset per-lesson state for the new activity.
+   229	    completedHandled = false;
+   230	    paused = false;
+   231	    pauseLabel.textContent = "Pause";
+   232	    pauseBtn.setAttribute("aria-pressed", "false");
+   233	    banners.innerHTML = "";
+   234	    overlay.classList.remove("show");
+   235	    overlayNext.hidden = true;
+   236	    overlayStayBtn.hidden = true;
+   237	
+   238	    renderHeader();
+   239	    applyTheme(lesson.theme === "DARK" ? "DARK" : "LIGHT", false);
+   240	    setStatus("connected");
+   241	    stageHint.classList.add("hidden");
+   242	    sendLessonData();
+   243	  }
+   244	
+   245	  // ---- Incoming messages --------------------------------------------------
+   246	  window.addEventListener("message", function (event) {
+   247	    // Only trust messages coming from our embedded activity iframe.
+   248	    if (!iframe.contentWindow || event.source !== iframe.contentWindow) return;
+   249	
+   250	    var data = event.data;
+   251	    if (!data || typeof data !== "object" || data.type !== "PLUGIN_EVENT") return;
+   252	
+   253	    switch (data.name) {
+   254	      case "pluginReady":
+   255	        ready = true;
+   256	        window.clearTimeout(connectTimer);
+   257	        setStatus("connected");
+   258	        stageHint.classList.add("hidden");
+   259	        sendLessonData();
+   260	        break;
+   261	
+   262	      case "activityCompleted":
+   263	        handleCompleted(data.payload);
+   264	        break;
+   265	
+   266	      case "pluginError":
+   267	        showBanner(data.message ? String(data.message) : "The activity reported an error.");
+   268	        break;
+   269	
+   270	      default:
+   271	        break;
+   272	    }
+   273	  });
+   274	
+   275	  // ---- Host controls ------------------------------------------------------
+   276	  function setPaused(next) {
+   277	    paused = next;
+   278	    pauseLabel.textContent = paused ? "Resume" : "Pause";
+   279	    pauseBtn.setAttribute("aria-pressed", String(paused));
+   280	    pauseBtn.title = paused ? "Resume the activity" : "Pause the activity";
+   281	    send({ type: "PAUSE", payload: { pause: paused } });
+   282	  }
+   283	
+   284	  pauseBtn.addEventListener("click", function () { setPaused(!paused); });
+   285	
+   286	  finishBtn.addEventListener("click", function () {
+   287	    send({ type: "FORCE_FINISH" });
+   288	  });
+   289	
+   290	  themeBtn.addEventListener("click", function () {
+   291	    applyTheme(theme === "DARK" ? "LIGHT" : "DARK", true);
+   292	  });
+   293	
+   294	  // ---- Reload / lifecycle -------------------------------------------------
+   295	  function reloadActivity() {
+   296	    window.clearTimeout(advanceTimer);
+   297	    completedHandled = false;
+   298	    ready = false;
+   299	    paused = false;
+   300	    pauseLabel.textContent = "Pause";
+   301	    pauseBtn.setAttribute("aria-pressed", "false");
+   302	    overlay.classList.remove("show");
+   303	    overlayNext.hidden = true;
+   304	    overlayStayBtn.hidden = true;
+   305	    banners.innerHTML = "";
+   306	    stageHint.classList.remove("hidden");
+   307	    setStatus("waiting");
+   308	    iframe.src = "about:blank";
+   309	    startConnectWatchdog();
+   310	    window.setTimeout(function () { iframe.src = cfg.pluginUrl; }, 40);
+   311	  }
+   312	
+   313	  reloadBtn.addEventListener("click", reloadActivity);
+   314	  overlayStayBtn.addEventListener("click", function () {
+   315	    // Cancel the pending auto-advance for this completion. Reset the flag so a
+   316	    // later completion (e.g. the lesson is run again) can be handled normally.
+   317	    window.clearTimeout(advanceTimer);
+   318	    completedHandled = false;
+   319	    overlay.classList.remove("show");
+   320	    overlayNext.hidden = true;
+   321	    overlayStayBtn.hidden = true;
+   322	  });
+   323	
+   324	  // ---- Boot ---------------------------------------------------------------
+   325	  applyTheme(theme, false);
+   326	  setStatus("waiting");
+   327	  startConnectWatchdog();
+   328	  iframe.src = cfg.pluginUrl;
+   329	})();
+===== README.md
+     1	# WordHost LMS
+     2	
+     3	A minimal **LMS host** that lists learning activities and launches a third-party
+     4	**Word Processing Simulator** inside an iframe, communicating with it over
+     5	`window.postMessage`. Static HTML/CSS/JS only — no build step, no dependencies.
+     6	
+     7	## Pages
+     8	
+     9	| Page | File | Purpose |
+    10	| --- | --- | --- |
+    11	| 1. Task List | `index.html` | Card list of the 5 sample lessons/assessments. **Start** opens Page 2. |
+    12	| 2. Activity Runner | `activity.html?lesson=<index>` | Embeds the simulator and speaks the host protocol. |
+    13	
+    14	## Run on localhost:5000
+    15	
+    16	Double-click `serve.bat`, or run:
+    17	
+    18	```powershell
+    19	cd "D:\host-ms-word"
+    20	python -m http.server 5000
+    21	```
+    22	
+    23	Then open <http://localhost:5000/>.
+    24	
+    25	> Any static server works (e.g. `npx serve -l 5000`). It must be served over
+    26	> HTTP (not opened as a `file://` path) so the iframe and `postMessage` behave
+    27	> consistently.
+    28	
+    29	> **Cache busting:** because `python -m http.server` sends no cache headers,
+    30	> asset links carry a `?v=` tag (e.g. `css/styles.css?v=2`). After editing CSS
+    31	> or JS, bump `v` in `index.html` and `activity.html` (or hard-refresh with
+    32	> `Ctrl+Shift+R`) so the browser doesn't reuse a stale copy.
+    33	
+    34	## Configuration
+    35	
+    36	The embedded activity URL is a single constant in `js/config.js`:
+    37	
+    38	```js
+    39	window.APP_CONFIG = {
+    40	  pluginUrl: "http://localhost:4200/",  // <- change to the production URL later
+    41	  ...
+    42	};
+    43	```
+    44	
+    45	## postMessage protocol
+    46	
+    47	Host listens on `window` and only trusts messages whose `event.source` is the
+    48	embedded iframe.
+    49	
+    50	| Direction | Message |
+    51	| --- | --- |
+    52	| plugin → host | `{ type: 'PLUGIN_EVENT', name: 'pluginReady' }` |
+    53	| host → plugin | `{ type: 'PLUGIN_DATA_IN', payload: <selected lesson> }` |
+    54	| plugin → host | `{ type: 'PLUGIN_EVENT', name: 'activityCompleted', payload: { completed, tasksPassed, tasksTotal } }` |
+    55	| plugin → host | `{ type: 'PLUGIN_EVENT', name: 'pluginError', message }` |
+    56	| host → plugin | `{ type: 'PAUSE', payload: { pause: true \| false } }` |
+    57	| host → plugin | `{ type: 'FORCE_FINISH' }` |
+    58	| host → plugin | `{ type: 'PREFERENCE_CHANGED', payload: { type: 'theme', value: 'LIGHT' \| 'DARK' } }` |
+    59	
+    60	Behaviour notes:
+    61	
+    62	- On `pluginReady` the host sends the selected lesson via `PLUGIN_DATA_IN`.
+    63	- Only the **first** `activityCompleted` per lesson triggers the banner/overlay.
+    64	- After a completion the host **auto-advances**: ~1 second later it sends the
+    65	  next lesson in the list as a new `PLUGIN_DATA_IN` to the same iframe
+    66	  (no navigation). The overlay offers "Stay on this lesson" to cancel the
+    67	  pending advance, and "Back to Lesson List" to stop. When the **last** lesson
+    68	  finishes, the host shows "You've completed all lessons!" and does not advance.
+    69	- `pluginError` shows a dismissible error banner.
+    70	
+    71	## Host controls (Page 2)
+    72	
+    73	Pause / Resume · Force Finish · Light / Dark theme toggle · Reload activity ·
+    74	Back to Lesson List (available at any time, no need to wait for completion).
+    75	
+    76	## Project layout
+    77	
+    78	```
+    79	host-ms-word/
+    80	├─ index.html            Page 1 - Task List
+    81	├─ activity.html         Page 2 - Activity Runner
+    82	├─ css/styles.css        Shared styles (light + dark themes)
+    83	├─ js/config.js          Configurable constants (plugin URL, routes)
+    84	├─ js/lessons.js         Static sample lesson data (the contract)
+    85	├─ js/task-list.js       Page 1 logic
+    86	├─ js/activity-runner.js Page 2 logic + postMessage protocol
+    87	├─ assets/logo.svg
+    88	└─ serve.bat
+    89	```
+===== serve.bat
+     1	@echo off
+     2	REM Serve the WordHost LMS host on http://localhost:5000
+     3	REM Run this file from anywhere; it serves this folder.
+     4	cd /d "%~dp0"
+     5	echo Serving WordHost LMS at http://localhost:5000  (Ctrl+C to stop)
+     6	python -m http.server 5000
+===== assets/logo.svg
+     1	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="WordHost LMS">
+     2	  <rect x="4" y="4" width="56" height="56" rx="14" fill="#2563eb"/>
+     3	  <path d="M16 20h8l4 18 4-18h6l-8 26h-6z" fill="#fff" opacity=".95"/>
+     4	  <circle cx="44" cy="43" r="6" fill="#93c5fd"/>
+     5	</svg>
